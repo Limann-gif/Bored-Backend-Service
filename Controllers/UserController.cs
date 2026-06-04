@@ -53,38 +53,49 @@ public class UserController : ControllerBase
         {
             Email = user.Email,
             Password = user.PasswordHash,
-            Username = user.Name
+            Username = user.Name,
+            Role = user.Role
         };
 
-        var token = GenerateJwtToken(validUser);
+        var token = GenerateJwtToken(validUser, user.Id);
         return Ok(new { token });
     }
     
-    [HttpPost("getUser/{id}")]
-    public IActionResult GetUserDetails([FromRoute]string id)
+    [HttpGet("getUser/{id}")]
+    public async Task<IActionResult> GetUserDetails([FromRoute]string id)
     {
         // In a real app, BCRYPT or Argon2 should be used to hash the password!
-        var data = _userRepository.GetUserById(id);
+        var data = await _userRepository.GetUserById(id);
+        return Ok(data);
+        
+    }
+    
+    [HttpGet("getUsers")]
+    public async Task<IActionResult> GetUserDetails()
+    {
+        // In a real app, BCRYPT or Argon2 should be used to hash the password!
+        var data = await _userRepository.GetUsers();
         return Ok(data);
         
     }
 
-    private string GenerateJwtToken(UserDto user)
+    private string GenerateJwtToken(UserDto user, Guid userId)
     {
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
         var claims = new[]
         {
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
             new Claim(ClaimTypes.Name, user.Username),
-            new Claim(ClaimTypes.Role, "User")
+            new Claim(ClaimTypes.Role, user.Role)
         };
 
         var token = new JwtSecurityToken(
             _config["Jwt:Issuer"],
             _config["Jwt:Audience"],
             claims,
-            expires: DateTime.Now.AddMinutes(10),
+            expires: DateTime.Now.AddMinutes(30),
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);

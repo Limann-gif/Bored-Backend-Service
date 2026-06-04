@@ -8,13 +8,13 @@ namespace BoredWeb.Controllers;
 [Route("api/[controller]")]
 [ApiController]
 
-public class MatchesController: ControllerBase
+public class GroupsController: ControllerBase
 {
     private readonly IConfiguration _config;
     private readonly ILogger<UserController> _logger;
     private readonly IUserRepository _userRepository;
 
-    public MatchesController(IConfiguration config, ILogger<UserController> logger, IUserRepository userRepository)
+    public GroupsController(IConfiguration config, ILogger<UserController> logger, IUserRepository userRepository)
     {
         _config = config;
         _logger = logger;
@@ -22,9 +22,9 @@ public class MatchesController: ControllerBase
     }
 
     [HttpGet("getAllGroupsActivityHistory")]
-    public IActionResult GetAllGroupsActivityHistory()
+    public async Task<IActionResult> GetAllGroupsActivityHistory()
     {
-        var response = _userRepository.GetActivityWithGroupList();
+        var response = await _userRepository.GetGroupList();
         return Ok(response);
     }
 }

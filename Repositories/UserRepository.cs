@@ -73,6 +73,37 @@ public class UserRepository : IUserRepository
         }
     }
 
+    public async Task<ApiResponse<List<UserDto>>> GetUsers()
+    {
+        try
+        {
+            var users = await _dbContext.Users
+                .Include(u => u.BookingOrders)
+                .ToListAsync();
+
+            var responseData = users.Select(user => new UserDto
+            { 
+                Id = user.Id,
+                Username = user.Name,
+                Email = user.Email,
+                BookingCount = user.BookingOrders?.Count ?? 0,
+                Role = user.Role
+            }).ToList();
+
+            return new ApiResponse<List<UserDto>>
+            {
+                Code = (int)HttpStatusCode.OK,
+                Message = "Users retrieved successfully.",
+                Data = responseData
+            };
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
     //Activities
     
     public async Task<ApiResponse<ActivityDto>> GetActivityById(Guid id)
@@ -121,6 +152,7 @@ public class UserRepository : IUserRepository
             // 2. Map the list of entities to a list of DTOs using LINQ Select
             var responseData = activities.Select(activity => new ActivityDto
             {
+                Id = activity.Id,
                 Name = activity.Name,
                 Description = activity.Description,
                 Category = activity.Category,
@@ -237,29 +269,37 @@ public class UserRepository : IUserRepository
                 };
             }
 
-            // 2. Map and populate the Order entity
+            // 2. Create a Transaction record first (required by FK constraint)
+            var transaction = new Transaction
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                Type = "booking",
+                Amount = activity.Price,
+                Status = "pending",
+                Description = $"Booking for {activity.Name}",
+                ReferenceId = Guid.NewGuid(),
+                CreatedAt = DateTime.UtcNow
+            };
+            await _dbContext.Transactions.AddAsync(transaction);
+            await _dbContext.SaveChangesAsync();
+
+            // 3. Map and populate the Order entity
             var order = new ActivityBookingOrder
             {
                 Id = Guid.NewGuid(),
                 UserId = user.Id,
                 ActivityId = activity.Id,
                 CreatedAt = DateTime.UtcNow,
-            
-                // Setting default statuses
                 PaymentStatus = "pending",
-                ConfirmationStatus = "pending", // Changed from null! to a default string
-            
-                // Group booking details from the request
+                ConfirmationStatus = "pending",
                 IsGroupBooking = request.IsGroup,
                 ParticipantsName = request.ParticipantsName ?? new List<string>(),
                 ParticipantsEmail = request.ParticipantsEmail ?? new List<string>(),
-
-                // If your flow creates a transaction record first, assign its ID here.
-                // If not, you might need to handle this via a Transaction entity.
-                TransactionId = Guid.NewGuid()
+                TransactionId = transaction.Id
             };
 
-            // 3. Save to Database
+            // 4. Save the booking order
             await _dbContext.ActivityBookingOrders.AddAsync(order);
             await _dbContext.SaveChangesAsync();
 
@@ -354,11 +394,10 @@ public class UserRepository : IUserRepository
     }
 
 
-    public async Task<ApiResponse<List<GroupManagement>>> GetActivityWithGroupList()
+    public async Task<ApiResponse<List<GroupManagement>>> GetGroupList()
     {
         try
         {
-            // 1. Fetch bookings with related Activity, User, and any potential Reviews
             var bookings = await _dbContext.ActivityBookingOrders
                 .Include(b => b.Activity)
                 .Include(b => b.User)

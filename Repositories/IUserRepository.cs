@@ -7,6 +7,8 @@ public interface IUserRepository
     Task<int> AddUser(UserDto request);
 
     Task<ApiResponse<User>> GetUserById(string id);
+    
+    Task<ApiResponse<List<UserDto>>> GetUsers();
 
     Task<ApiResponse<ActivityDto>> GetActivityById(Guid request);
     
@@ -24,5 +26,5 @@ public interface IUserRepository
 
     Task<ApiResponse<List<ActivityBookingOrder>>> GetAllActivityHistory();
     
-    Task<ApiResponse<List<GroupManagement>>> GetActivityWithGroupList();
+    Task<ApiResponse<List<GroupManagement>>> GetGroupList();
 }

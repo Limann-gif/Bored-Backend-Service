@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using BoredWeb.Controllers;
 using BoredWeb.Models;
 using BoredWeb.Repositories;
@@ -69,9 +70,13 @@ public class ActivitiesController: ControllerBase
     [HttpPost("bookActivity")]
     public async Task<IActionResult> BookActivity(BookingDto book)
     {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
+            return Unauthorized("Invalid or missing user token.");
+
+        book.UserId = userId;
         var data = await _userRepository.BookActivity(book);
         return Ok(data);
-        
     }
     
     

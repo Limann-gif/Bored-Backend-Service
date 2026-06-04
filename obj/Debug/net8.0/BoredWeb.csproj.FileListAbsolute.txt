@@ -104,3 +104,4 @@
 /Users/sammiatlimann/Documents/RiderProjects/StudyProjects/Bored/BoredWeb/obj/Debug/net8.0/staticwebassets/msbuild.buildTransitive.BoredWeb.props
 /Users/sammiatlimann/Documents/RiderProjects/StudyProjects/Bored/BoredWeb/obj/Debug/net8.0/staticwebassets.pack.json
 /Users/sammiatlimann/Documents/RiderProjects/StudyProjects/Bored/BoredWeb/obj/Debug/net8.0/scopedcss/bundle/BoredWeb.styles.css
+/Users/sammiatlimann/Documents/RiderProjects/StudyProjects/Bored/BoredWeb/obj/Debug/net8.0/BoredWeb.sourcelink.json
