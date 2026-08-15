@@ -1,3 +1,4 @@
+using BoredWeb.Models;
 using BoredWeb.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -21,10 +22,26 @@ public class GroupsController: ControllerBase
         _userRepository = userRepository;
     }
 
+    //ADMIN Endpoint
     [HttpGet("getAllGroupsActivityHistory")]
     public async Task<IActionResult> GetAllGroupsActivityHistory()
     {
         var response = await _userRepository.GetGroupList();
         return Ok(response);
     }
+    
+    [HttpPost("updateGroupActivity")]
+    public async Task<IActionResult> UpdateGroupActivity(ActivityProgressDto activity)
+    {
+        var response = await _userRepository.ManageGroupActivtyProgress(activity);
+        return Ok(response);
+    }
+    
+    [HttpGet("getGroupMembers/{userId}")]
+    public async Task<IActionResult> GetGroupMembers([FromRoute] Guid userId)
+    {
+        var response = await _userRepository.GroupMembers(userId);
+        return Ok(response);
+    }
+   
 }

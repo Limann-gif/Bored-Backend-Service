@@ -8,7 +8,6 @@ public class BoredDbContext(DbContextOptions<BoredDbContext> options) : DbContex
     public DbSet<User> Users { get; set; }
     public DbSet<Activity> Activities { get; set; }
     public DbSet<ActivityBookingOrder> ActivityBookingOrders { get; set; }
-    public DbSet<Transaction> Transactions { get; set; }
     public DbSet<Complaint> Complaints { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -59,6 +58,8 @@ public class BoredDbContext(DbContextOptions<BoredDbContext> options) : DbContex
             e.Property(o => o.ParticipantsName).HasColumnType("text[]");
             e.Property(o => o.ParticipantsEmail).HasColumnType("text[]");
             e.Property(o => o.CreatedAt).HasDefaultValueSql("now()");
+            e.Property(o => o.TransactionId).HasDefaultValueSql("gen_random_uuid()");
+            e.Property(o => o.AmountPaid).HasColumnType("decimal(10,2)");
 
             e.HasOne(o => o.User)
                 .WithMany(u => u.BookingOrders)
@@ -71,34 +72,9 @@ public class BoredDbContext(DbContextOptions<BoredDbContext> options) : DbContex
                 .OnDelete(DeleteBehavior.Restrict);
 
             // One-to-one: each booking maps to exactly one transaction
-            e.HasOne(o => o.Transaction)
-                .WithOne(t => t.BookingOrder)
-                .HasForeignKey<ActivityBookingOrder>(o => o.TransactionId)
-                .OnDelete(DeleteBehavior.Restrict);
-
             e.HasIndex(o => o.UserId);
             e.HasIndex(o => o.ActivityId);
-            e.HasIndex(o => o.TransactionId).IsUnique();
-        });
-
-        modelBuilder.Entity<Transaction>(e =>
-        {
-            e.HasKey(t => t.Id);
-            e.Property(t => t.Id).HasDefaultValueSql("gen_random_uuid()");
-            e.Property(t => t.Type).IsRequired().HasMaxLength(20).HasDefaultValue("booking");
-            e.Property(t => t.Amount).HasColumnType("decimal(10,2)");
-            e.Property(t => t.Status).IsRequired().HasMaxLength(20);
-            e.Property(t => t.Description).HasMaxLength(1000);
-            e.Property(t => t.CreatedAt).HasDefaultValueSql("now()");
-
-            e.HasOne(t => t.User)
-                .WithMany(u => u.Transactions)
-                .HasForeignKey(t => t.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            e.HasIndex(t => t.UserId);
-            e.HasIndex(t => t.ReferenceId);
-            e.HasIndex(t => t.Status);
+       
         });
 
         modelBuilder.Entity<Complaint>(e =>

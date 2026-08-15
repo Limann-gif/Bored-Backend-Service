@@ -27,4 +27,18 @@ public interface IUserRepository
     Task<ApiResponse<List<ActivityBookingOrder>>> GetAllActivityHistory();
     
     Task<ApiResponse<List<GroupManagement>>> GetGroupList();
+    
+    Task<ApiResponse<List<GroupMembersDto>>> GroupMembers(Guid userId);
+
+    Task<ApiResponse<ActivityProgressDto>> ManageGroupActivtyProgress(ActivityProgressDto request);
+    
+    Task<ApiResponse<TransactionDto>> Callback(TransactionDto request);
+    
+    Task<ApiResponse<PaymentDto>> PaymentDetailPage(Guid orderId);
+    
+    Task<ApiResponse<List<PaymentHistoryDto>>> FetchPaymentHistory();
+ 
+
+    Task<ApiResponse<object>> InitializePaymentAsync(InitializePaymentDto request);
+
 }

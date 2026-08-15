@@ -12,7 +12,6 @@ public class Activity
     public int GroupSizeMax { get; set; }
     public string Location { get; set; } = null!;
     public string? ImageUrl { get; set; }
-    public DateTime Date { get; set; }
     public DateTime CreatedAt { get; set; }
 
     /// <summary>forming | confirmed | completed | cancelled</summary>
@@ -21,7 +20,6 @@ public class Activity
     public DateTime ActivityDate { get; set; }
     public DateTime? CancellationDate { get; set; }
     public string? CancellationReason { get; set; }
-    public int NumberOfParticipants { get; set; }
 
     // Navigation
     public ICollection<ActivityBookingOrder> BookingOrders { get; set; } = [];

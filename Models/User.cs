@@ -18,6 +18,5 @@ public class User
 
     // Navigation
     public ICollection<ActivityBookingOrder> BookingOrders { get; set; } = [];
-    public ICollection<Transaction> Transactions { get; set; } = [];
     public ICollection<Complaint> Complaints { get; set; } = [];
 }

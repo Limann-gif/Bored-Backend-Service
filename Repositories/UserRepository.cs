@@ -1,6 +1,8 @@
 using System.Net;
+using System.Net.Http.Headers;
 using BoredWeb.Data;
 using BoredWeb.Models;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace BoredWeb.Repositories;
@@ -8,10 +10,12 @@ namespace BoredWeb.Repositories;
 public class UserRepository : IUserRepository
 {
     private readonly BoredDbContext _dbContext;
+    private readonly IConfiguration _configuration;
 
-    public UserRepository(BoredDbContext dbContext)
+    public UserRepository(BoredDbContext dbContext, IConfiguration configuration)
     {
         _dbContext = dbContext;
+        _configuration = configuration;
     }
 
     //User
@@ -124,7 +128,8 @@ public class UserRepository : IUserRepository
                 GroupSizeMin = activity.GroupSizeMin,
                 ImageUrl = activity.ImageUrl,
                 Location = activity.Location,
-                Price = activity.Price
+                Price = activity.Price,
+                ActivityDate = activity.ActivityDate,
             };
             return new ApiResponse<ActivityDto>
             {
@@ -161,7 +166,8 @@ public class UserRepository : IUserRepository
                 GroupSizeMin = activity.GroupSizeMin,
                 ImageUrl = activity.ImageUrl,
                 Location = activity.Location,
-                Price = activity.Price
+                Price = activity.Price,
+                ActivityDate = activity.ActivityDate,
             }).ToList();
 
             // 3. Wrap in your ApiResponse
@@ -225,7 +231,7 @@ public class UserRepository : IUserRepository
            if (activity == null) new Exception("Activity not found.");
 
            activity.ActivityDate = request.ActivityDate;
-           activity.NumberOfParticipants = request.NumberOfParticipants;
+           activity.Capacity = request.Capacity;
            activity.Price = request.Price;
            activity.Status = request.Status;
            _dbContext.Activities.Update(activity);
@@ -268,22 +274,8 @@ public class UserRepository : IUserRepository
                     Message = "User or Activity not found."
                 };
             }
-
-            // 2. Create a Transaction record first (required by FK constraint)
-            var transaction = new Transaction
-            {
-                Id = Guid.NewGuid(),
-                UserId = user.Id,
-                Type = "booking",
-                Amount = activity.Price,
-                Status = "pending",
-                Description = $"Booking for {activity.Name}",
-                ReferenceId = Guid.NewGuid(),
-                CreatedAt = DateTime.UtcNow
-            };
-            await _dbContext.Transactions.AddAsync(transaction);
-            await _dbContext.SaveChangesAsync();
-
+            
+              
             // 3. Map and populate the Order entity
             var order = new ActivityBookingOrder
             {
@@ -292,11 +284,15 @@ public class UserRepository : IUserRepository
                 ActivityId = activity.Id,
                 CreatedAt = DateTime.UtcNow,
                 PaymentStatus = "pending",
-                ConfirmationStatus = "pending",
+                ConfirmationStatus = "booked",
                 IsGroupBooking = request.IsGroup,
-                ParticipantsName = request.ParticipantsName ?? new List<string>(),
-                ParticipantsEmail = request.ParticipantsEmail ?? new List<string>(),
-                TransactionId = transaction.Id
+                ParticipantsName = new[] { user.Name }
+                    .Concat(request.ParticipantsName ?? new List<string>())
+                    .ToList(),
+                ParticipantsEmail = new[] { user.Email }
+                    .Concat(request.ParticipantsEmail ?? new List<string>())
+                    .ToList(),
+                TransactionId = Guid.NewGuid()
             };
 
             // 4. Save the booking order
@@ -343,10 +339,13 @@ public class UserRepository : IUserRepository
                     Location = b.Activity.Location,
                     Price = b.Activity.Price,
                     Category = b.Activity.Category,
-                    Date= b.Activity.ActivityDate
+                    ActivityDate= b.Activity.ActivityDate,
+                    ImageUrl = b.Activity.ImageUrl,
+                    Status = b.ConfirmationStatus
                     // Add other fields as needed
                 }
             });
+            
 
             // 3. Group by the determined status
             var groupedData = formattedActivities
@@ -376,7 +375,14 @@ public class UserRepository : IUserRepository
         try
         {
             var data = await _dbContext.ActivityBookingOrders.ToListAsync();
-            if (data == null) new Exception("Activity list not found.");
+            if (!data.Any())
+            {
+                return new ApiResponse<List<ActivityBookingOrder>>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "Activity details not found."
+                };
+            }
 
             return new ApiResponse<List<ActivityBookingOrder>>()
             {
@@ -415,8 +421,9 @@ public class UserRepository : IUserRepository
                     return new GroupManagement
                     {
                         NameOfActivity = activity.Name,
-                        ActivityStatus = activity.Status,
+                        ConfirmationStatus  = firstBooking.ConfirmationStatus,
                         CreatedAt = activity.CreatedAt,
+                        
                         NumberOfParticipants = group.Sum(b => 1 + (b.ParticipantsName?.Count ?? 0)),
                     
                         // Map Members from all bookings in this activity group
@@ -457,6 +464,342 @@ public class UserRepository : IUserRepository
         catch (Exception e)
         {
             Console.WriteLine($"Error mapping group management: {e.Message}");
+            throw;
+        }
+    }
+
+    public async Task<ApiResponse<List<GroupMembersDto>>> GroupMembers(Guid userId)
+    {
+        try
+        {
+            var orders = await _dbContext.ActivityBookingOrders
+                .Include(x => x.Activity)
+                .Where(x => x.UserId == userId)
+                .ToListAsync();
+           
+            if (!orders.Any())
+            {
+                return new ApiResponse<List<GroupMembersDto>>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "Members not found."
+                }; 
+            }
+            
+            var data = orders
+                .GroupBy(o => o.ActivityId)
+                .Select(group => new GroupMembersDto
+                {
+                    // Retrieve the activity name from the loaded navigation property
+                    ActivityName = group.First().Activity?.Name ?? "Unknown Activity",
+                
+                    // Collect and flatten participant names for this specific activity
+                    GroupMembers = group
+                        .Where(o => o.ParticipantsName != null)
+                        .SelectMany(o => o.ParticipantsName)
+                        .Distinct() // Avoid duplicates if booked multiple times
+                        .ToList()
+                })
+                .ToList();
+        
+            return new ApiResponse<List<GroupMembersDto>>
+            {
+                Code = (int)HttpStatusCode.Accepted,
+                Message = "Retrieved group members successfully.",
+                Data = data
+            };
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Error finding members: {e.Message}");
+            throw;
+        }
+    }
+
+    public async Task<ApiResponse<ActivityProgressDto>> ManageGroupActivtyProgress(ActivityProgressDto request)
+    {
+        try
+        {
+           var groupActivity = await _dbContext.ActivityBookingOrders.FirstOrDefaultAsync(b => b.Id == request.ActivityId);
+
+           if (groupActivity == null)
+           {
+               return new ApiResponse<ActivityProgressDto>
+               {
+                   Code = (int)HttpStatusCode.NotFound,
+                   Message = "Group or booking details not found."
+               }; 
+           }
+           
+           //Booking Statuses. Booked,Confirmed,Cancelled,Completed
+
+           groupActivity.ConfirmationStatus = request.BookingStatus;
+           await _dbContext.SaveChangesAsync();
+           
+           return new ApiResponse<ActivityProgressDto>
+           {
+               Code = (int)HttpStatusCode.Created,
+               Message = "Activity paid for successfully.",
+               Data = request // Or map 'order' back to a DTO if preferred
+           };
+           
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Error updating group activity progress: {e.Message}");
+            throw;
+        }
+    }
+
+    public async Task<ApiResponse<TransactionDto>> Callback(TransactionDto request)
+    {
+        try
+        {
+            var order =  await _dbContext.ActivityBookingOrders.FirstOrDefaultAsync(x => x.TransactionId == request.TransactionId);
+            if (order == null)
+            {
+                return new ApiResponse<TransactionDto>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "Booking details not found."
+                };
+            }
+
+            if (request.Status != "success")
+            {
+                return new ApiResponse<TransactionDto>
+                {
+                    Code = (int)HttpStatusCode.BadRequest,
+                    Message = request.Status
+                };
+            }
+
+            order.PaymentStatus = "paid";
+            order.AmountPaid = request.Amount; 
+            
+            await _dbContext.SaveChangesAsync();
+            
+            var updateActivity = await _dbContext.Activities.FirstOrDefaultAsync(b => b.Id == order.ActivityId);
+            if (updateActivity == null)
+            {
+                return new ApiResponse<TransactionDto>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "Activity details not found."
+                };
+            }
+
+            var slots = order.AmountPaid / updateActivity.Price;
+            var slotsLeft = updateActivity.Capacity - (int)slots;
+
+            var data = new TransactionDto
+            {
+                Amount = request.Amount,
+                CreatedAt = order.CreatedAt,
+                TransactionId = order.TransactionId,
+                Status = "paid",
+                slotsRemaining = slotsLeft
+            };
+            
+            return new ApiResponse<TransactionDto>
+            {
+                Code = (int)HttpStatusCode.Created,
+                Message = "Activity paid for successfully.",
+                Data = data // Or map 'order' back to a DTO if preferred
+            };
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Error receiving callback: {e.Message}");
+            throw;
+        }
+    }
+
+    public async Task<ApiResponse<PaymentDto>> PaymentDetailPage(Guid orderId)
+    {
+        try
+        {
+            var order =  await _dbContext.ActivityBookingOrders.FirstOrDefaultAsync(x => x.Id == orderId);
+            if (order == null)
+            {
+                return new ApiResponse<PaymentDto>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "Order not found."
+                };
+            }
+            
+            var details = await _dbContext.Activities.FirstOrDefaultAsync(b => b.Id == order.ActivityId);
+            
+            if (details == null)
+            {
+                return new ApiResponse<PaymentDto>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "Order 2 not found."
+                };
+            }
+            
+            var user = await _dbContext.Users.FirstOrDefaultAsync(b => b.Id == order.UserId);
+            
+            if (user == null)
+            {
+                return new ApiResponse<PaymentDto>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "Order 3 not found."
+                };
+            }
+
+            var data = new PaymentDto
+            {
+                Amount = details.Price,
+                CreatedAt = order.CreatedAt,
+                CustomerName = user.Name,
+                Status = "pending",
+                Activity = new Activity
+                {
+                    Name = details.Name,
+                    ImageUrl = details.ImageUrl, 
+                    Location = details.Location
+                }
+            };
+            
+            return new ApiResponse<PaymentDto>
+            {
+                Code = (int)HttpStatusCode.Created,
+                Message = "Order retrieved successfully.",
+                Data = data 
+            };
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Error receiving order: {e.Message}");
+            throw;
+        }
+    }
+    public async Task<ApiResponse<List<PaymentHistoryDto>>> FetchPaymentHistory()
+    {
+        try
+        {
+            var orders = await _dbContext.ActivityBookingOrders
+                .Where(x => x.TransactionId != null).Include(activityBookingOrder => activityBookingOrder.User)
+                .ToListAsync();
+
+            if (!orders.Any())
+            {
+                return new ApiResponse<List<PaymentHistoryDto>>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "Activity details not found."
+                };
+            }
+            
+            var paymentHistory = orders.Select(order => new PaymentHistoryDto
+            {
+                TransactionId = order.TransactionId,
+                UserName = order.User.Name,                       
+                TransactionDate = order.CreatedAt,                  
+                Amount = order.AmountPaid,
+                Status = order.PaymentStatus                  
+            }).ToList();
+
+            return new ApiResponse<List<PaymentHistoryDto>>
+            {
+                Code = (int)HttpStatusCode.Accepted,
+                Message = "Activity details retrieved successfully.",
+                Data = paymentHistory 
+            };
+
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Error retrieving transactions: {e.Message}");
+            throw;
+        }
+    }
+    public async Task<ApiResponse<object>> InitializePaymentAsync(InitializePaymentDto request)
+    {
+        try
+        {
+            // ... logic for database saving and calling Paystack ...
+            
+            var user = await _dbContext.Users.FindAsync(request.UserId);
+            
+            if (user == null)
+            {
+                return new ApiResponse<object>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "User details not found."
+                };
+            }
+            
+            var activity = await _dbContext.Activities.FindAsync(request.ActivityId);
+          
+            if (activity == null)
+            {
+                return new ApiResponse<object>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "Activity details not found."
+                };
+            }
+            
+            var order= await _dbContext.ActivityBookingOrders.FindAsync(request.OrderId);
+            
+            if (order == null)
+            {
+                return new ApiResponse<object>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "Order details not found."
+                };
+            }
+            
+            // Prepare Paystack payload (Amount in KOBO/SMALLEST CURRENCY UNIT)
+            var paystackPayload = new
+            {
+                email = user.Email,
+                amount = (int)(activity.Price), // e.g. GHS 160.00 -> 16000
+                reference = order.Id.ToString(),       // Map order ID directly as transaction reference
+                callback_url = "http://localhost:5000/api/payment/callback" // Where Paystack redirects user after payment
+            };
+            
+            // 3. Post to Paystack API
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Authorization = 
+                new AuthenticationHeaderValue("Bearer", _configuration["Paystack:SecretKey"]);
+
+            var response = await client.PostAsJsonAsync("https://api.paystack.co/transaction/initialize", paystackPayload);
+            var paystackResult = await response.Content.ReadFromJsonAsync<PaystackInitResponse>();
+
+
+            if (paystackResult?.Status == true)
+            {
+                return new ApiResponse<object>
+                {
+                    Code = (int)HttpStatusCode.OK,
+                    Message = "Payment initialized successfully.",
+                    Data = new
+                    {
+                        CheckoutUrl = paystackResult.Data.AuthorizationUrl,
+                        Reference = paystackResult.Data.Reference
+                    }
+                };
+            }
+            
+            return new ApiResponse<object>
+            {
+                Code = (int)HttpStatusCode.BadRequest,
+                Message = "Could not initialize payment.",
+                Data = null
+            };
+
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
             throw;
         }
     }

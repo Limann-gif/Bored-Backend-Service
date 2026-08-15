@@ -25,7 +25,7 @@ public class ActivitiesController: ControllerBase
         _userRepository = userRepository;
     }
     
-    
+    // Get an activity
     [HttpGet("activity/{id}")]
     public async Task<IActionResult> GetActivity([FromRoute] Guid id)
     {
@@ -34,6 +34,7 @@ public class ActivitiesController: ControllerBase
         return Ok(data);
     }
     
+    // Get list of activities
     [HttpGet("activityList")]
     public async Task<IActionResult> GetActivity()
     {
@@ -43,6 +44,7 @@ public class ActivitiesController: ControllerBase
     }
     
     // In a real app, BCRYPT or Argon2 should be used to hash the password!
+    //for ADMIN to add an activity
     [HttpPost("addActivity")]
     public async Task<IActionResult> AddActivity(Activity request)
     {
@@ -50,6 +52,7 @@ public class ActivitiesController: ControllerBase
         return Ok(data);
     }
     
+    // for ADMIN to delete an activity
     [HttpDelete("deleteActivity/{id}")]
     public async Task<IActionResult> DeleteActivity([FromRoute] string id)
     {
@@ -58,6 +61,7 @@ public class ActivitiesController: ControllerBase
         return Ok(data);
     }
     
+    // for ADMIN to update an activity
     [HttpPost("updateActivity")]
     public async Task<IActionResult> UpdateActivity(Activity request)
     {
@@ -67,6 +71,7 @@ public class ActivitiesController: ControllerBase
         
     }
     
+    // Book and activity, pay later
     [HttpPost("bookActivity")]
     public async Task<IActionResult> BookActivity(BookingDto book)
     {
@@ -79,22 +84,22 @@ public class ActivitiesController: ControllerBase
         return Ok(data);
     }
     
-    
-    [HttpPost("getUserActivityHistory")]
-    public IActionResult GetUserActivityHistory(Guid id)
+    // Gets all activities booked for a user
+    [HttpGet("getUserActivityHistory/{userId}")]
+    public IActionResult GetUserActivityHistory([FromRoute] Guid userId)
     {
-        var data = _userRepository.GetUserActivityHistory(id);
+        var data = _userRepository.GetUserActivityHistory(userId);
         if (data.Result.Code != 200) return BadRequest("Failed to get user activity history");
         
         return Ok(data.Result);
         
     }
     
-    [HttpPost("getAllActivityHistory")]
-    public IActionResult GetAllActivityHistory()
-    {
-        var data = _userRepository.GetAllActivityHistory();
-        return Ok(data);
-        
-    }
+    // [HttpGet("getAllActivityHistory")]
+    // public IActionResult GetAllActivityHistory()
+    // {
+    //     var data = _userRepository.GetAllActivityHistory();
+    //     return Ok(data);
+    //     
+    // }
 }

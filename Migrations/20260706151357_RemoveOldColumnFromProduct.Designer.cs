@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using BoredWeb.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BoredWeb.Migrations
 {
     [DbContext(typeof(BoredDbContext))]
-    partial class BoredDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260706151357_RemoveOldColumnFromProduct")]
+    partial class RemoveOldColumnFromProduct
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -77,6 +80,9 @@ namespace BoredWeb.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
 
+                    b.Property<int>("NumberOfParticipants")
+                        .HasColumnType("integer");
+
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(10,2)");
 
@@ -108,9 +114,6 @@ namespace BoredWeb.Migrations
                     b.Property<Guid>("ActivityId")
                         .HasColumnType("uuid");
 
-                    b.Property<decimal>("AmountPaid")
-                        .HasColumnType("decimal(10,2)");
-
                     b.Property<string>("ConfirmationStatus")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -140,9 +143,7 @@ namespace BoredWeb.Migrations
                         .HasDefaultValue("pending");
 
                     b.Property<Guid>("TransactionId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasDefaultValueSql("gen_random_uuid()");
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -150,6 +151,9 @@ namespace BoredWeb.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ActivityId");
+
+                    b.HasIndex("TransactionId")
+                        .IsUnique();
 
                     b.HasIndex("UserId");
 
@@ -202,6 +206,54 @@ namespace BoredWeb.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Complaints");
+                });
+
+            modelBuilder.Entity("BoredWeb.Models.Transaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("now()");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("ReferenceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("booking");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReferenceId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Transactions");
                 });
 
             modelBuilder.Entity("BoredWeb.Models.User", b =>
@@ -269,6 +321,12 @@ namespace BoredWeb.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("BoredWeb.Models.Transaction", "Transaction")
+                        .WithOne("BookingOrder")
+                        .HasForeignKey("BoredWeb.Models.ActivityBookingOrder", "TransactionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("BoredWeb.Models.User", "User")
                         .WithMany("BookingOrders")
                         .HasForeignKey("UserId")
@@ -276,6 +334,8 @@ namespace BoredWeb.Migrations
                         .IsRequired();
 
                     b.Navigation("Activity");
+
+                    b.Navigation("Transaction");
 
                     b.Navigation("User");
                 });
@@ -291,9 +351,25 @@ namespace BoredWeb.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("BoredWeb.Models.Transaction", b =>
+                {
+                    b.HasOne("BoredWeb.Models.User", "User")
+                        .WithMany("Transactions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("BoredWeb.Models.Activity", b =>
                 {
                     b.Navigation("BookingOrders");
+                });
+
+            modelBuilder.Entity("BoredWeb.Models.Transaction", b =>
+                {
+                    b.Navigation("BookingOrder");
                 });
 
             modelBuilder.Entity("BoredWeb.Models.User", b =>
@@ -301,6 +377,8 @@ namespace BoredWeb.Migrations
                     b.Navigation("BookingOrders");
 
                     b.Navigation("Complaints");
+
+                    b.Navigation("Transactions");
                 });
 #pragma warning restore 612, 618
         }

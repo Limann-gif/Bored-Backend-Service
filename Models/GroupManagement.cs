@@ -4,7 +4,7 @@ public class GroupManagement
 {
     public string NameOfActivity {get; set;}
     public int NumberOfParticipants {get; set;}
-    public string ActivityStatus {get; set;}
+    public string ConfirmationStatus {get; set;}
     public DateTime CreatedAt {get; set;}
     public List<GroupMembers> Members {get; set;}
     public List<Reviews> Reviews {get; set;}

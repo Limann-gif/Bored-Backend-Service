@@ -15,6 +15,7 @@ public class ActivityBookingOrder
 
     public Guid TransactionId { get; set; }
     public bool IsGroupBooking { get; set; }
+    public decimal AmountPaid { get; set; }
 
     public List<string> ParticipantsName { get; set; } = [];
     public List<string> ParticipantsEmail { get; set; } = [];
@@ -22,5 +23,4 @@ public class ActivityBookingOrder
     // Navigation
     public User User { get; set; } = null!;
     public Activity Activity { get; set; } = null!;
-    public Transaction Transaction { get; set; } = null!;
 }

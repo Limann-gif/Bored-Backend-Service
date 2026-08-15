@@ -12,4 +12,5 @@ public class ActivityDto
     public int GroupSizeMax { get; set; }
     public string Location { get; set; } = null!;
     public string? ImageUrl { get; set; }
+    public DateTime ActivityDate { get; set; }
 }
