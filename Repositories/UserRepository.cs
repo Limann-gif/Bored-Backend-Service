@@ -116,7 +116,14 @@ public class UserRepository : IUserRepository
         {
             var activity = await _dbContext.Activities.FindAsync(id);
             
-            if (activity == null) new Exception("Activity not found.");
+            if (activity == null)
+            {
+                return new ApiResponse<ActivityDto>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "Activity not found."
+                };
+            }
 
             var response = new ActivityDto
             {
@@ -152,7 +159,14 @@ public class UserRepository : IUserRepository
         {
             var activities = await _dbContext.Activities.ToListAsync();
             
-            if (activities == null) new Exception("Activity list not found.");
+            if (activities.Count == 0)
+            {
+                return new ApiResponse<List<ActivityDto>>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "Activity list not found."
+                };
+            }
             
             // 2. Map the list of entities to a list of DTOs using LINQ Select
             var responseData = activities.Select(activity => new ActivityDto
@@ -228,7 +242,15 @@ public class UserRepository : IUserRepository
         try
         {
            var activity =  await _dbContext.Activities.FindAsync(request.Id);
-           if (activity == null) new Exception("Activity not found.");
+           
+           if (activity == null)
+           {
+               return new ApiResponse<Activity>
+               {
+                   Code = (int)HttpStatusCode.NotFound,
+                   Message = "Activity not found."
+               };
+           }
 
            activity.ActivityDate = request.ActivityDate;
            activity.Capacity = request.Capacity;
@@ -237,7 +259,14 @@ public class UserRepository : IUserRepository
            _dbContext.Activities.Update(activity);
           var saved = await _dbContext.SaveChangesAsync();
           
-          if(saved == 0) new Exception("Activity not saved.");
+          if (saved == 0)
+          {
+              return new ApiResponse<Activity>
+              {
+                  Code = (int)HttpStatusCode.NotFound,
+                  Message = "Activity not saved."
+              };
+          }
  
            return new ApiResponse<Activity>
            {
