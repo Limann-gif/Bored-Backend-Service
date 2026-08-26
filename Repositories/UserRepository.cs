@@ -157,7 +157,7 @@ public class UserRepository : IUserRepository
     {
         try
         {
-            var activities =  _dbContext.Activities.ToList();
+            var activities =  await _dbContext.Activities.ToListAsync();
             
             if (activities.Count == 0)
             {
