@@ -157,7 +157,7 @@ public class UserRepository : IUserRepository
     {
         try
         {
-            var activities = await _dbContext.Activities.ToListAsync();
+            var activities =  _dbContext.Activities.ToList();
             
             if (activities.Count == 0)
             {
@@ -167,6 +167,7 @@ public class UserRepository : IUserRepository
                     Message = "Activity list not found."
                 };
             }
+            
             
             // 2. Map the list of entities to a list of DTOs using LINQ Select
             var responseData = activities.Select(activity => new ActivityDto

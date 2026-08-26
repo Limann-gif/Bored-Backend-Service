@@ -1,12 +1,9 @@
 using System.Security.Claims;
-using BoredWeb.Controllers;
 using BoredWeb.Models;
 using BoredWeb.Repositories;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 
-namespace BoredWeb;
+namespace BoredWeb.Controllers;
 
 
 [Route("api/[controller]")]
