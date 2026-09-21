@@ -21,7 +21,9 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins("https://borednow.app",
+                "https://www.borednow.app",
+                "http://localhost:5173")
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
