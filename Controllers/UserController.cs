@@ -47,7 +47,7 @@ public class UserController : ControllerBase
     {
         var user = _dbContext.Users.FirstOrDefault(u=>u.Email==request.Email && u.PasswordHash == request.Password);
         
-        if (user == null) return Unauthorized("Invalid credentials");
+        if (user == null) return Unauthorized("User not found");
 
         var validUser = new UserDto
         {
