@@ -2,13 +2,6 @@ using System.Text.Json.Serialization;
 
 namespace BoredWeb.Models;
 
-// DTO sent from Frontend to Backend
-public class InitializePaymentDto
-{
-    public Guid UserId { get; set; }
-    public Guid ActivityId { get; set; }
-    public Guid OrderId { get; set; }
-}
 
 // Model returned by Paystack API when initializing
 public class PaystackInitResponse

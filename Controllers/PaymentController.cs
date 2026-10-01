@@ -144,10 +144,10 @@ public class PaymentController: ControllerBase
     }
     
     //Initialize payment step 1
-    [HttpPost("initialize")]
-    public async Task<IActionResult> InitializePayment([FromBody] InitializePaymentDto request)
+    [HttpPost("initialize/{activityBookingOrderId}")]
+    public async Task<IActionResult> InitializePayment(Guid activityBookingOrderId)
     { // Helper method to get logged in user GUID
-        var response = await _userRepository.InitializePaymentAsync(request);
+        var response = await _userRepository.InitializePaymentAsync(activityBookingOrderId);
 
         if (response.Code == 200)
         {

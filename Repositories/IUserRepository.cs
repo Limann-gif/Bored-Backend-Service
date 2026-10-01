@@ -6,7 +6,7 @@ public interface IUserRepository
 {
     Task<int> AddUser(UserDto request);
 
-    Task<ApiResponse<User>> GetUserById(string id);
+    Task<ApiResponse<UserDetailsDto>> GetUserById(string id);
     
     Task<ApiResponse<List<UserDto>>> GetUsers();
 
@@ -22,7 +22,7 @@ public interface IUserRepository
     
     Task<ApiResponse<BookingDto>> BookActivity(BookingDto request);
 
-    Task<ApiResponse<Dictionary<string, List<Activity>>>> GetUserActivityHistory(Guid userId);
+    Task<ApiResponse<Dictionary<string, List<UserActivityHistoryDto>>>> GetUserActivityHistory(Guid userId);
 
     Task<ApiResponse<List<ActivityBookingOrder>>> GetAllActivityHistory();
     
@@ -39,6 +39,6 @@ public interface IUserRepository
     Task<ApiResponse<List<PaymentHistoryDto>>> FetchPaymentHistory();
  
 
-    Task<ApiResponse<object>> InitializePaymentAsync(InitializePaymentDto request);
+    Task<ApiResponse<object>> InitializePaymentAsync(Guid activityBookingOrderId);
 
 }
