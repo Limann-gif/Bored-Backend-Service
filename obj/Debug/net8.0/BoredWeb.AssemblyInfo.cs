@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("BoredWeb")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+02ff77b2088d077be4d5658c172481b8051f80a3")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9d3afe3109de84cdc7704f68164763fb41d67fab")]
 [assembly: System.Reflection.AssemblyProductAttribute("BoredWeb")]
 [assembly: System.Reflection.AssemblyTitleAttribute("BoredWeb")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -76,15 +76,15 @@ public class UserRepository : IUserRepository
                 .Where(o => o.UserId == user.Id)
                 .ToListAsync();
             
-            if (!userActivity.Any())
-            {
-                return new ApiResponse<UserDetailsDto>
-                {
-                    Code = (int)HttpStatusCode.NotFound,
-                    Message = "User Activity not found."
-                }; 
-            }
-            
+            // if (!userActivity.Any())
+            // {
+            //     return new ApiResponse<UserDetailsDto>
+            //     {
+            //         Code = (int)HttpStatusCode.NotFound,
+            //         Message = "User Activity not found."
+            //     }; 
+            // }
+            //
 
             var userDetails = new UserDetailsDto()
             {
