@@ -81,6 +81,22 @@ public class ActivitiesController: ControllerBase
         return Ok(data);
     }
     
+    // Cancel a booked activity
+    [HttpDelete("cancel/bookedActivity/{activityOrderId}")]
+    public async Task<IActionResult> CancelBookedActivity([FromRoute] Guid activityOrderId)
+    {
+        var data = await _userRepository.CancelBookedActivity(activityOrderId);
+        return Ok(data);
+    }
+    
+    // Cancel a paid activity - send request to admin
+    [HttpPost("cancel/paidActivity/{activityOrderId}")]
+    public async Task<IActionResult> CancelPaidActivity([FromRoute] Guid activityOrderId)
+    {
+        var data = await _userRepository.CancelPaidActivity(activityOrderId);
+        return Ok(data);
+    }
+    
     // Gets all activities booked for a user
     [HttpGet("getUserActivityHistory/{userId}")]
     public IActionResult GetUserActivityHistory([FromRoute] Guid userId)
@@ -92,11 +108,25 @@ public class ActivitiesController: ControllerBase
         
     }
     
-    // [HttpGet("getAllActivityHistory")]
-    // public IActionResult GetAllActivityHistory()
+    
+    // Get Refund requests for paid activities ADMIN Endpoint
+    [HttpGet("refundRequests")]
+    public async Task<IActionResult> GetRefundRequests()
+    {
+        var data = await _userRepository.GetRefundRequest();
+        return Ok(data);
+    }
+    
+    // // Refund a paid activity ADMIN Endpoint Make sure to update from paid to refunded after a successful refund
+    // [HttpPost("refund/paidActivity")]
+    // public async Task<IActionResult> BookActivity(BookingDto book)
     // {
-    //     var data = _userRepository.GetAllActivityHistory();
+    //     var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    //     if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
+    //         return Unauthorized("Invalid or missing user token.");
+    //
+    //     book.UserId = userId;
+    //     var data = await _userRepository.BookActivity(book);
     //     return Ok(data);
-    //     
     // }
 }

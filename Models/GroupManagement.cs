@@ -2,6 +2,7 @@ namespace BoredWeb.Models;
 
 public class GroupManagement
 {
+    public Guid Id { get; set; }
     public string NameOfActivity {get; set;}
     public int NumberOfParticipants {get; set;}
     public string ConfirmationStatus {get; set;}

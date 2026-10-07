@@ -21,6 +21,10 @@ public interface IUserRepository
     Task<ApiResponse<Activity>> UpdateActivity(Activity request);
     
     Task<ApiResponse<BookingDto>> BookActivity(BookingDto request);
+    Task<ApiResponse<BookingDto>> CancelBookedActivity(Guid activityOrderId);
+    
+    Task<ApiResponse<BookingDto>> CancelPaidActivity(Guid activityOrderId);
+    Task<ApiResponse<List<ActivityBookingOrder>>> GetRefundRequest();
 
     Task<ApiResponse<Dictionary<string, List<UserActivityHistoryDto>>>> GetUserActivityHistory(Guid userId);
 

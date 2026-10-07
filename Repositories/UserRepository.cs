@@ -76,15 +76,6 @@ public class UserRepository : IUserRepository
                 .Where(o => o.UserId == user.Id)
                 .ToListAsync();
             
-            // if (!userActivity.Any())
-            // {
-            //     return new ApiResponse<UserDetailsDto>
-            //     {
-            //         Code = (int)HttpStatusCode.NotFound,
-            //         Message = "User Activity not found."
-            //     }; 
-            // }
-            //
 
             var userDetails = new UserDetailsDto()
             {
@@ -390,6 +381,138 @@ public class UserRepository : IUserRepository
         }
     }
 
+    public async Task<ApiResponse<BookingDto>> CancelBookedActivity(Guid activityOrderId)
+    {
+        try
+        {
+            // 1. Fetch the Booked Activity to ensure it exists
+            var bookedActivity = await _dbContext.ActivityBookingOrders.FindAsync(activityOrderId);
+
+            if (bookedActivity == null)
+            {
+                return new ApiResponse<BookingDto>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "Booked Activity not found."
+                };
+            }
+            
+            _dbContext.ActivityBookingOrders.Remove(bookedActivity);
+            
+           var saved = await _dbContext.SaveChangesAsync();
+
+           if (saved == 0)
+           {
+               return new ApiResponse<BookingDto>
+               {
+                   Code = (int)HttpStatusCode.NotFound,
+                   Message = "Attempt to cancel booked Activity failed."
+               };
+           }
+
+            return new ApiResponse<BookingDto>
+            {
+                Code = (int)HttpStatusCode.Created,
+                Message = "Booked Activity canceled successfully.",
+                Data = null
+            };
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    public async Task<ApiResponse<BookingDto>> CancelPaidActivity(Guid activityOrderId)
+    {
+        try
+        {
+            // 1. Fetch the Booked Activity to ensure it exists
+            var bookedActivity = await _dbContext.ActivityBookingOrders.FindAsync(activityOrderId);
+
+            if (bookedActivity == null)
+            {
+                return new ApiResponse<BookingDto>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "Booked Activity not found."
+                };
+            }
+
+            if (bookedActivity.PaymentStatus == "paid")
+            {
+                bookedActivity.ConfirmationStatus = "requestrefund";
+                _dbContext.ActivityBookingOrders.Update(bookedActivity);
+                var saved = await _dbContext.SaveChangesAsync();
+                
+                if (saved == 0)
+                {
+                    return new ApiResponse<BookingDto>
+                    {
+                        Code = (int)HttpStatusCode.NotFound,
+                        Message = "Refund request failed"
+                    };
+                }
+ 
+                return new ApiResponse<BookingDto>
+                {
+                    Code = (int)HttpStatusCode.OK,
+                    Message = "Refund request sent successfully.",
+                    Data = null
+                };
+
+            }
+            
+            return new ApiResponse<BookingDto>
+            {
+                Code = (int)HttpStatusCode.OK,
+                Message = "Booked Activity not paid for.",
+                Data = null
+            };
+            
+        }
+        
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    public async Task<ApiResponse<List<ActivityBookingOrder>>> GetRefundRequest()
+    {
+        try
+        {
+            // 1. Fetch the Booked Activity to ensure it exists
+            var bookedActivity = await _dbContext.ActivityBookingOrders.Where(b => b.ConfirmationStatus == "requestrefund")
+                .ToListAsync();;
+
+            if (bookedActivity == null)
+            {
+                return new ApiResponse<List<ActivityBookingOrder>>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "Refund requests for Booked Activities not found."
+                };
+            }
+            
+            
+            return new ApiResponse<List<ActivityBookingOrder>>
+            {
+                Code = (int)HttpStatusCode.OK,
+                Message = "Retrieved Successfully",
+                Data = bookedActivity
+            };
+            
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
 
     public async Task<ApiResponse<Dictionary<string, List<UserActivityHistoryDto>>>> GetUserActivityHistory(Guid userId)
     {
@@ -478,55 +601,51 @@ public class UserRepository : IUserRepository
     }
 
 
+  
     public async Task<ApiResponse<List<GroupManagement>>> GetGroupList()
     {
-        try
+        try 
         {
             var bookings = await _dbContext.ActivityBookingOrders
                 .Include(b => b.Activity)
                 .Include(b => b.User)
-                // .Include(b => b.Reviews) // Assuming a relationship exists
+                // .Include(b => b.Reviews)
                 .ToListAsync();
 
-            // 2. Group by Activity to fill the GroupManagement model
+            // Map each distinct booking order directly to GroupManagement
             var result = bookings
-                .GroupBy(b => b.ActivityId)
-                .Select(group => 
+                .Select(b => 
                 {
-                    var firstBooking = group.First();
-                    var activity = firstBooking.Activity;
+                    var membersList = new List<GroupMembers>
+                    {
+                        new GroupMembers 
+                        { 
+                            Name = $"{b.User.Name} (Lead)", 
+                            IsPaymentCompleted = b.PaymentStatus == "success" 
+                        }
+                    };
+
+                    if (b.ParticipantsName != null)
+                    {
+                        membersList.AddRange(b.ParticipantsName.Select(p => new GroupMembers 
+                        { 
+                            Name = p, 
+                            IsPaymentCompleted = b.PaymentStatus == "success" 
+                        }));
+                    }
 
                     return new GroupManagement
                     {
-                        NameOfActivity = activity.Name,
-                        ConfirmationStatus  = firstBooking.ConfirmationStatus,
-                        CreatedAt = activity.CreatedAt,
-                        
-                        NumberOfParticipants = group.Sum(b => 1 + (b.ParticipantsName?.Count ?? 0)),
+                        NameOfActivity = b.Activity?.Name,
+                        Id = b.Id,
+                        ConfirmationStatus = b.ConfirmationStatus,
+                        CreatedAt = b.CreatedAt,
                     
-                        // Map Members from all bookings in this activity group
-                        Members = group.SelectMany(b => 
-                        {
-                            var membersList = new List<GroupMembers>
-                            {
-                                new GroupMembers { 
-                                    Name = $"{b.User.Name} (Lead)", 
-                                    IsPaymentCompleted = b.PaymentStatus == "success" 
-                                }
-                            };
+                        // Count participants specifically for this booking order
+                        NumberOfParticipants = 1 + (b.ParticipantsName?.Count ?? 0),
+                
+                        Members = membersList,
 
-                            if (b.ParticipantsName != null)
-                            {
-                                membersList.AddRange(b.ParticipantsName.Select(p => new GroupMembers 
-                                { 
-                                    Name = p, 
-                                    IsPaymentCompleted = b.PaymentStatus == "success" 
-                                }));
-                            }
-                            return membersList;
-                        }).ToList(),
-
-                        // Placeholder for Reviews - logic depends on where your reviews are stored
                         Reviews = new List<Reviews>() 
                     };
                 })
@@ -598,28 +717,28 @@ public class UserRepository : IUserRepository
     {
         try
         {
-           var groupActivity = await _dbContext.ActivityBookingOrders.FirstOrDefaultAsync(b => b.Id == request.ActivityId);
+            var groupActivity = await _dbContext.ActivityBookingOrders.FirstOrDefaultAsync(b => b.Id == request.ActivityId);
 
-           if (groupActivity == null)
-           {
-               return new ApiResponse<ActivityProgressDto>
-               {
-                   Code = (int)HttpStatusCode.NotFound,
-                   Message = "Group or booking details not found."
-               }; 
-           }
+            if (groupActivity == null)
+            {
+                return new ApiResponse<ActivityProgressDto>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "Group or booking details not found."
+                }; 
+            }
            
-           //Booking Statuses. Booked,Confirmed,Cancelled,Completed
+            //Booking Statuses. Booked,Confirmed,Cancelled,Completed
 
-           groupActivity.ConfirmationStatus = request.BookingStatus;
-           await _dbContext.SaveChangesAsync();
+            groupActivity.ConfirmationStatus = request.BookingStatus;
+            await _dbContext.SaveChangesAsync();
            
-           return new ApiResponse<ActivityProgressDto>
-           {
-               Code = (int)HttpStatusCode.Created,
-               Message = "Activity paid for successfully.",
-               Data = request // Or map 'order' back to a DTO if preferred
-           };
+            return new ApiResponse<ActivityProgressDto>
+            {
+                Code = (int)HttpStatusCode.Created,
+                Message = "Activity paid for successfully.",
+                Data = request // Or map 'order' back to a DTO if preferred
+            };
            
         }
         catch (Exception e)
@@ -804,7 +923,7 @@ public class UserRepository : IUserRepository
 
             var activityBookingOrder = await _dbContext.ActivityBookingOrders.FindAsync(activityBookingOrderId);
             
-           // var user = await _dbContext.Users.FindAsync(request.UserId);
+            // var user = await _dbContext.Users.FindAsync(request.UserId);
             
             if (activityBookingOrder == null)
             {

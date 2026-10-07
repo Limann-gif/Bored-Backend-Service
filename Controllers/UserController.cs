@@ -37,7 +37,7 @@ public class UserController : ControllerBase
        var data = await _userRepository.AddUser(request);
        if (data != 1)
        {
-           return BadRequest("SignUp Failed or User already exists");
+           return BadRequest("User already exists");
        }
        return Ok("User created successfully");
     }
