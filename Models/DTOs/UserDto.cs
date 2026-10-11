@@ -1,4 +1,4 @@
-namespace BoredWeb.Models;
+namespace BoredWeb.Models.DTOs;
 
 public class UserDto
 {

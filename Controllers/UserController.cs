@@ -3,8 +3,10 @@ using System.Security.Claims;
 using System.Text;
 using BoredWeb.Data;
 using BoredWeb.Models;
+using BoredWeb.Models.DTOs;
 using BoredWeb.Repositories;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
@@ -35,11 +37,7 @@ public class UserController : ControllerBase
     public async Task<IActionResult> SignUp(UserDto request)
     {
        var data = await _userRepository.AddUser(request);
-       if (data != 1)
-       {
-           return BadRequest("User already exists");
-       }
-       return Ok("User created successfully");
+       return Ok(data);
     }
 
     [HttpPost("login")]
@@ -48,6 +46,11 @@ public class UserController : ControllerBase
         var user = _dbContext.Users.FirstOrDefault(u=>u.Email==request.Email && u.PasswordHash == request.Password);
         
         if (user == null) return Unauthorized("User not found");
+        
+        if (!user.IsEmailVerified)
+        {
+            return BadRequest(new ApiResponse<string> { Code = 400, Message = "Please verify your email address before logging in." });
+        }
 
         var validUser = new UserDto
         {
@@ -79,6 +82,32 @@ public class UserController : ControllerBase
         
     }
 
+    
+    // Verify Email
+    [HttpPost("verify-email")]
+    public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto dto)
+    {
+        var data = await _userRepository.VerifyEmail(dto);
+
+        var user = new UserDto
+        {
+            Email = data.Data.Email,
+            Password = data.Data.PasswordHash,
+            Username = data.Data.Name,
+            Role = data.Data.Role
+        };
+
+     // Generate JWT Access Token so they get instant access
+        var token = GenerateJwtToken(user, user.Id);
+
+        return Ok(new ApiResponse<object>
+        {
+            Code = 200,
+            Message = "Email verified successfully.",
+            Data = new { Token = token }
+        });
+    }
+    
     private string GenerateJwtToken(UserDto user, Guid userId)
     {
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));

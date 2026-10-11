@@ -25,7 +25,6 @@ public class BoredDbContext(DbContextOptions<BoredDbContext> options) : DbContex
             e.Property(u => u.LocationAddress).HasMaxLength(500);
             e.Property(u => u.Role).IsRequired().HasMaxLength(20).HasDefaultValue("user");
             e.Property(u => u.JoinedAt).HasDefaultValueSql("now()");
-
             e.HasIndex(u => u.Email).IsUnique();
         });
 

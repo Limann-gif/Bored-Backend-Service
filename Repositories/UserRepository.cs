@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Mail;
 using BoredWeb.Data;
 using BoredWeb.Models;
+using BoredWeb.Models.DTOs;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,33 +20,50 @@ public class UserRepository : IUserRepository
         _configuration = configuration;
     }
 
-    //User
-
-    public async Task<int> AddUser(UserDto request)
+    //Add user through sign up
+    public async Task<ApiResponse<VerifyEmailDto>> AddUser(UserDto request)
     {
         try
         {
             bool exists = await _dbContext.Users.AnyAsync(u => u.Email == request.Email);
             if (exists)
             {
-                return 0;
+                return new ApiResponse<VerifyEmailDto>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "Email already exists."
+                };
             }
+            // 2. Generate 6-digit code
+            var verificationCode = new Random().Next(100000, 999999).ToString();
             
             // 1. Map DTO to Entity
             var user = new User
             {
                 Name = request.Username,
                 Email = request.Email,
-                // WARNING: Always hash passwords before saving. 
-                // Using a placeholder method name 'HashPassword' below.
-                PasswordHash = request.Password
+                PasswordHash = request.Password,
+                Role = "user",
+                IsEmailVerified = false,
+                VerificationCode = verificationCode,
+                VerificationCodeExpiry = DateTime.UtcNow.AddMinutes(15)
             };
 
             // 2. Add to context (AddAsync is preferred for async flow)
             await _dbContext.Users.AddAsync(user);
 
             // 3. Save changes asynchronously and return the number of state entries written
-            return await _dbContext.SaveChangesAsync();
+             await _dbContext.SaveChangesAsync();
+             
+             //send email
+             await SendVerificationCodeAsync(request.Email, verificationCode);
+             
+             return new ApiResponse<VerifyEmailDto>
+             {
+                 Code = (int)HttpStatusCode.Accepted,
+                 Message = "Registration successful. Please check your email for verification code."
+             };
+            
         }
         catch (Exception e)
         {
@@ -993,6 +1012,96 @@ public class UserRepository : IUserRepository
                 Code = (int)HttpStatusCode.BadRequest,
                 Message = "Could not initialize payment.",
                 Data = null
+            };
+
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    public async Task SendVerificationCodeAsync(string toEmail, string code)
+    {
+        try
+        {
+            var smtpHost = _configuration["Email:Host"];
+            var smtpPort = int.Parse(_configuration["Email:Port"] ?? "587");
+            var senderEmail = _configuration["Email:Sender"];
+            var senderUsername = _configuration["Email:Username"] ?? "resend";
+            var senderPassword = _configuration["Email:Password"];
+         
+
+            using var client = new SmtpClient(smtpHost, smtpPort)
+            {
+                Credentials = new NetworkCredential(senderUsername, senderPassword),
+                EnableSsl = true
+            };
+
+            var mailMessage = new MailMessage
+            {
+                From = new MailAddress(senderEmail!, "Bored App"),
+                Subject = "Verify your Bored App account",
+                Body = $"<p>Welcome to Bored!</p><p>Your 6-digit email verification code is: <strong>{code}</strong></p><p>This code expires in 15 minutes.</p>",
+                IsBodyHtml = true
+            };
+
+            mailMessage.To.Add(toEmail);
+            await client.SendMailAsync(mailMessage);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    public async Task<ApiResponse<User>> VerifyEmail(VerifyEmailDto request)
+    {
+        try
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+
+            if (user == null)
+            {
+                return new ApiResponse<User>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "User not found."
+                };
+            }
+
+            if (user.IsEmailVerified)
+            {
+                return new ApiResponse<User>
+                {
+                    Code = (int)HttpStatusCode.BadRequest,
+                    Message = "Email is already verified."
+                };
+         
+            }
+
+            if (user.VerificationCode != request.Code || user.VerificationCodeExpiry < DateTime.UtcNow)
+            {
+                return new ApiResponse<User>
+                {
+                    Code = (int)HttpStatusCode.BadRequest,
+                    Message = "Invalid or expired verification code."
+                };
+            }
+            
+            // Update user state
+            user.IsEmailVerified = true;
+            user.VerificationCode = null; // Clear code
+            user.VerificationCodeExpiry = null;
+            await _dbContext.SaveChangesAsync();
+            
+            return new ApiResponse<User>
+            {
+                Code = (int)HttpStatusCode.Created,
+                Message = "Email verified successfully.",
+                Data = user
             };
 
         }

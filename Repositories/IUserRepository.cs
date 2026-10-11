@@ -1,10 +1,11 @@
 using BoredWeb.Models;
+using BoredWeb.Models.DTOs;
 
 namespace BoredWeb.Repositories;
 
 public interface IUserRepository
 {
-    Task<int> AddUser(UserDto request);
+    Task<ApiResponse<VerifyEmailDto>> AddUser(UserDto request);
 
     Task<ApiResponse<UserDetailsDto>> GetUserById(string id);
     
@@ -41,8 +42,12 @@ public interface IUserRepository
     Task<ApiResponse<PaymentDto>> PaymentDetailPage(Guid orderId);
     
     Task<ApiResponse<List<PaymentHistoryDto>>> FetchPaymentHistory();
- 
-
+    
     Task<ApiResponse<object>> InitializePaymentAsync(Guid activityBookingOrderId);
-
+    
+    // Send Email Verification
+    Task SendVerificationCodeAsync(string toEmail, string code);
+    
+    // Verify
+    Task<ApiResponse<User>> VerifyEmail(VerifyEmailDto request);
 }

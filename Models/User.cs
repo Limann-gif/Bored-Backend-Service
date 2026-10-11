@@ -13,8 +13,12 @@ public class User
 
     /// <summary>user | admin</summary>
     public string Role { get; set; } = "user";
-
     public DateTime JoinedAt { get; set; }
+    
+    // Verification fields
+    public bool IsEmailVerified { get; set; } = false;
+    public string? VerificationCode { get; set; }
+    public DateTime? VerificationCodeExpiry { get; set; }
 
     // Navigation
     public ICollection<ActivityBookingOrder> BookingOrders { get; set; } = [];
