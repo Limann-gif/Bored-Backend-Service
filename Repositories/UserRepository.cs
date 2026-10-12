@@ -1026,11 +1026,11 @@ public class UserRepository : IUserRepository
     {
         try
         {
-            var smtpHost = _configuration["Email:EmailHost"];
-            var smtpPort = int.Parse(_configuration["Email:EmailPort"] ?? "587");
-            var senderEmail = _configuration["Email:EmailSender"];
-            var senderUsername = _configuration["Email:EmailUsername"] ?? "resend";
-            var senderPassword = _configuration["Email:EmailPassword"];
+            var smtpHost = _configuration["Email:Host"];
+            var smtpPort = int.Parse(_configuration["Email:Port"] ?? "587");
+            var senderEmail = _configuration["Email:Sender"];
+            var senderUsername = _configuration["Email:Username"] ?? "resend";
+            var senderPassword = _configuration["Email:Password"];
          
 
             using var client = new SmtpClient(smtpHost, smtpPort)
