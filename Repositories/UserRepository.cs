@@ -34,9 +34,23 @@ public class UserRepository : IUserRepository
                     Message = "Email already exists."
                 };
             }
+             
+            // Age limit verification
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var age = today.Year - request.DateOfBirth.Year;
+            if (age < 18)
+            {
+                return new ApiResponse<VerifyEmailDto>
+                {
+                    Code = (int)HttpStatusCode.BadRequest,
+                    Message = "You must be 18 or older to use this service."
+                };
+            }
+
             // 2. Generate 6-digit code
             var verificationCode = new Random().Next(100000, 999999).ToString();
             
+           
             // 1. Map DTO to Entity
             var user = new User
             {
@@ -46,9 +60,12 @@ public class UserRepository : IUserRepository
                 Role = "user",
                 IsEmailVerified = false,
                 VerificationCode = verificationCode,
+                Gender = request.Gender,
+                DateOfBirth = request.DateOfBirth,
                 VerificationCodeExpiry = DateTime.UtcNow.AddMinutes(15)
             };
-
+            
+           
             // 2. Add to context (AddAsync is preferred for async flow)
             await _dbContext.Users.AddAsync(user);
 
@@ -72,13 +89,49 @@ public class UserRepository : IUserRepository
             throw;
         }
     }
-    
+
+    public async Task<ApiResponse<User>> UpdateProfile(UserUpdateDto request, Guid id)
+    {
+        try
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id);
+        
+            if (user == null)
+            {
+                return new ApiResponse<User>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "User not found."
+                };
+            }
+            
+            user.Bio = request.Bio;
+            user.Occupation = request.Ocupation;
+            user.Phone = request.PhoneNumber;
+            user.LocationAddress =  request.Location;
+            
+             await _dbContext.SaveChangesAsync();
+             
+             return new ApiResponse<User>
+             {
+                 Code = (int)HttpStatusCode.NotFound,
+                 Message = "User details updated successfully.",
+                 Data = user
+             };
+
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
 
     public async Task<ApiResponse<UserDetailsDto>> GetUserById(Guid id)
     {
         try
         {
-       
             
             var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id);
         
@@ -95,6 +148,8 @@ public class UserRepository : IUserRepository
                 .Where(o => o.UserId == user.Id)
                 .ToListAsync();
             
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var age = today.Year - user.DateOfBirth.Year;
 
             var userDetails = new UserDetailsDto()
             {
@@ -106,8 +161,9 @@ public class UserRepository : IUserRepository
                 Occupation = user.Occupation,
                 ActivitiesNumber = userActivity.Count,
                 GroupsJoinedNumber = userActivity.Count(o => o.IsGroupBooking),
-                CompletedActivityNumber = userActivity.Count(o => string.Equals(o.ConfirmationStatus, "completed", StringComparison.OrdinalIgnoreCase))
-
+                CompletedActivityNumber = userActivity.Count(o => string.Equals(o.ConfirmationStatus, "completed", StringComparison.OrdinalIgnoreCase)),
+                Age = age,
+                Gender = user.Gender
             };
 
             return new ApiResponse<UserDetailsDto>()

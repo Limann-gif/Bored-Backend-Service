@@ -6,6 +6,9 @@ namespace BoredWeb.Repositories;
 public interface IUserRepository
 {
     Task<ApiResponse<VerifyEmailDto>> AddUser(UserDto request);
+    
+    Task<ApiResponse<User>> UpdateProfile(UserUpdateDto request, Guid id);
+
 
     Task<ApiResponse<UserDetailsDto>> GetUserById(Guid id);
     

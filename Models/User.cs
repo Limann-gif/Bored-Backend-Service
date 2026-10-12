@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices.JavaScript;
+
 namespace BoredWeb.Models;
 
 public class User
@@ -10,6 +12,8 @@ public class User
     public string? Bio { get; set; } 
     public string? Occupation { get; set; }
     public string? LocationAddress { get; set; }
+    public DateOnly DateOfBirth { get; set; }
+    public string Gender { get; set; }
 
     /// <summary>user | admin</summary>
     public string Role { get; set; } = "user";

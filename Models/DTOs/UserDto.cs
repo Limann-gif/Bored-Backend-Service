@@ -8,5 +8,6 @@ public class UserDto
     public string Password { get; set; }
     public string Role { get; set; }
     public int BookingCount { get; set; }
-    public int Age{get; set;}
+    public DateOnly DateOfBirth { get; set; }
+    public string Gender { get; set; }
 }

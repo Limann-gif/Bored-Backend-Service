@@ -41,7 +41,7 @@ public class UserController : ControllerBase
     }
 
     [HttpPost("login")]
-    public IActionResult Login(UserDto request)
+    public IActionResult Login(LoginDto request)
     {
         var user = _dbContext.Users.FirstOrDefault(u=>u.Email==request.Email && u.PasswordHash == request.Password);
         
@@ -106,6 +106,14 @@ public class UserController : ControllerBase
             Message = "Email verified successfully.",
             Data = new { Token = token }
         });
+    }
+    
+    //Update profile
+    [HttpPost("updateProfile/{id}")]
+    public async Task<IActionResult> UpdateProfile([FromRoute] Guid id, UserUpdateDto request)
+    {
+        var data = await _userRepository.UpdateProfile(request, id);
+        return Ok(data);
     }
     
     private string GenerateJwtToken(UserDto user, Guid userId)

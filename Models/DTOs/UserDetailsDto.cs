@@ -1,4 +1,4 @@
-namespace BoredWeb.Models;
+namespace BoredWeb.Models.DTOs;
 
 public class UserDetailsDto
 {
@@ -14,5 +14,6 @@ public class UserDetailsDto
     public int GroupsJoinedNumber{get; set;}
     public int CompletedActivityNumber{get; set;}
     public DateTime JoinedAt {get; set;}
+    public string Gender { get; set; }
     
 }
