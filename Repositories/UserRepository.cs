@@ -1026,11 +1026,11 @@ public class UserRepository : IUserRepository
     {
         try
         {
-            var smtpHost = _configuration["Email:Host"];
-            var smtpPort = int.Parse(_configuration["Email:Port"] ?? "587");
-            var senderEmail = _configuration["Email:Sender"];
-            var senderUsername = _configuration["Email:Username"] ?? "resend";
-            var senderPassword = _configuration["Email:Password"];
+            var smtpHost = _configuration["Email:EmailHost"];
+            var smtpPort = int.Parse(_configuration["Email:EmailPort"] ?? "587");
+            var senderEmail = _configuration["Email:EmailSender"];
+            var senderUsername = _configuration["Email:EmailUsername"] ?? "resend";
+            var senderPassword = _configuration["Email:EmailPassword"];
          
 
             using var client = new SmtpClient(smtpHost, smtpPort)
@@ -1052,7 +1052,7 @@ public class UserRepository : IUserRepository
         }
         catch (Exception e)
         {
-            Console.WriteLine(e);
+            Console.WriteLine("Could not send verification email. Please check your email configuration or try again.");
             throw;
         }
     }
