@@ -74,13 +74,13 @@ public class UserRepository : IUserRepository
     }
     
 
-    public async Task<ApiResponse<UserDetailsDto>> GetUserById(string id)
+    public async Task<ApiResponse<UserDetailsDto>> GetUserById(Guid id)
     {
         try
         {
-            var guidId = Guid.Parse(id); 
+       
             
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == guidId);
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Id == id);
         
             if (user == null)
             {

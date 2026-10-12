@@ -65,7 +65,7 @@ public class UserController : ControllerBase
     }
     
     [HttpGet("getUser/{id}")]
-    public async Task<IActionResult> GetUserDetails([FromRoute]string id)
+    public async Task<IActionResult> GetUserDetails([FromRoute]Guid id)
     {
         // In a real app, BCRYPT or Argon2 should be used to hash the password!
         var data = await _userRepository.GetUserById(id);

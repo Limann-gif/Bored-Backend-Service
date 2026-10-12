@@ -7,7 +7,7 @@ public interface IUserRepository
 {
     Task<ApiResponse<VerifyEmailDto>> AddUser(UserDto request);
 
-    Task<ApiResponse<UserDetailsDto>> GetUserById(string id);
+    Task<ApiResponse<UserDetailsDto>> GetUserById(Guid id);
     
     Task<ApiResponse<List<UserDto>>> GetUsers();
 
