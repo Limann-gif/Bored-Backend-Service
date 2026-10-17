@@ -50,6 +50,19 @@ public class UserRepository : IUserRepository
             // 2. Generate 6-digit code
             var verificationCode = new Random().Next(100000, 999999).ToString();
             
+            //send email
+            var isEmailSent = await SendVerificationCodeAsync(request.Email, verificationCode);
+             
+            if (!isEmailSent)
+            {
+                // Handle the failure gracefully (e.g., return an error response, roll back database creation, etc.)
+                return new ApiResponse<VerifyEmailDto>
+                {
+                    Code = 400,
+                    Message = "Failed to send verification email. Verify email and try again."
+                };
+            }
+            
            
             // 1. Map DTO to Entity
             var user = new User
@@ -72,8 +85,6 @@ public class UserRepository : IUserRepository
             // 3. Save changes asynchronously and return the number of state entries written
              await _dbContext.SaveChangesAsync();
              
-             //send email
-             await SendVerificationCodeAsync(request.Email, verificationCode);
              
              return new ApiResponse<VerifyEmailDto>
              {
@@ -617,7 +628,8 @@ public class UserRepository : IUserRepository
                     ActivityDate= b.Activity.ActivityDate,
                     ImageUrl = b.Activity.ImageUrl,
                     Status = b.ConfirmationStatus,
-                    GroupParticipants = b.ParticipantsName
+                    GroupParticipants = b.ParticipantsName,
+                    IsGroupBooking = b.IsGroupBooking
                     // Add other fields as needed
                 }
             });
@@ -1078,7 +1090,7 @@ public class UserRepository : IUserRepository
         }
     }
 
-    public async Task SendVerificationCodeAsync(string toEmail, string code)
+    public async Task<bool> SendVerificationCodeAsync(string toEmail, string code)
     {
         try
         {
@@ -1105,11 +1117,13 @@ public class UserRepository : IUserRepository
 
             mailMessage.To.Add(toEmail);
             await client.SendMailAsync(mailMessage);
+            
+            return true; // Successfully sent
         }
         catch (Exception e)
         {
-            Console.WriteLine("Could not send verification email. Please check your email configuration or try again.");
-            throw;
+            Console.WriteLine($"Could not send verification email. Error: {e.Message}");
+            return false; // Failed to send
         }
     }
 

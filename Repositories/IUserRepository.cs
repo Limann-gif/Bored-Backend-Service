@@ -49,7 +49,7 @@ public interface IUserRepository
     Task<ApiResponse<object>> InitializePaymentAsync(Guid activityBookingOrderId);
     
     // Send Email Verification
-    Task SendVerificationCodeAsync(string toEmail, string code);
+    Task<bool> SendVerificationCodeAsync(string toEmail, string code);
     
     // Verify
     Task<ApiResponse<User>> VerifyEmail(VerifyEmailDto request);

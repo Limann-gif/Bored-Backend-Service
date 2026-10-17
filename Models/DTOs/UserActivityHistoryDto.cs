@@ -1,4 +1,4 @@
-namespace BoredWeb.Models;
+namespace BoredWeb.Models.DTOs;
 
 public class UserActivityHistoryDto
 {
@@ -13,6 +13,7 @@ public class UserActivityHistoryDto
     public string Location { get; set; } = null!;
     public string? ImageUrl { get; set; }
     public DateTime CreatedAt { get; set; }
+    public bool IsGroupBooking {get; set; }
 
     /// <summary>forming | confirmed | completed | cancelled</summary>
     public string Status { get; set; } = "forming";

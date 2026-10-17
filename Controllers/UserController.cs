@@ -43,9 +43,14 @@ public class UserController : ControllerBase
     [HttpPost("login")]
     public IActionResult Login(LoginDto request)
     {
-        var user = _dbContext.Users.FirstOrDefault(u=>u.Email==request.Email && u.PasswordHash == request.Password);
+        var user = _dbContext.Users.FirstOrDefault(u=>u.Email==request.Email);
         
         if (user == null) return Unauthorized("User not found");
+
+        if (user.PasswordHash != request.Password)
+        {
+            return Unauthorized("You have entered the wrong password. Kindly try again");
+        }
         
         if (!user.IsEmailVerified)
         {
