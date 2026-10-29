@@ -50,6 +50,7 @@ public class UserRepository : IUserRepository
             // 2. Generate 6-digit code
             var verificationCode = new Random().Next(100000, 999999).ToString();
             
+            
             //send email
             var isEmailSent = await SendVerificationCodeAsync(request.Email, verificationCode);
              
@@ -1174,6 +1175,124 @@ public class UserRepository : IUserRepository
                 Data = user
             };
 
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    public async Task<ApiResponse<User>> ForgotPassword(string email)
+    {
+        try
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == email);
+
+            if (user == null)
+            {
+                return new ApiResponse<User>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "User not found."
+                };
+            }
+            
+            if (!user.IsEmailVerified)
+            {
+                return new ApiResponse<User>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "Email must be verified."
+                };
+            }
+            
+            //generate a code that expires 
+            var passwordVerificationCode = new Random().Next(100000, 999999).ToString();
+
+                
+            var smtpHost = _configuration["Email:Host"];
+            var smtpPort = int.Parse(_configuration["Email:Port"] ?? "587");
+            var senderEmail = _configuration["Email:Sender"];
+            var senderUsername = _configuration["Email:Username"] ?? "resend";
+            var senderPassword = _configuration["Email:Password"];
+         
+
+            using var client = new SmtpClient(smtpHost, smtpPort)
+            {
+                Credentials = new NetworkCredential(senderUsername, senderPassword),
+                EnableSsl = true
+            };
+
+            var mailMessage = new MailMessage
+            {
+                From = new MailAddress(senderEmail!, "Bored App"),
+                Subject = "Verify your Bored App account",
+                Body = $"<p>We got a request to reset your password.Copy the 6 digit code!</p><p>{passwordVerificationCode}</p><p>This code expires in 5 minutes</p>",
+                IsBodyHtml = true
+            };
+
+            mailMessage.To.Add(email);
+            
+            await client.SendMailAsync(mailMessage);
+            
+            // Update user state
+           
+            user.PasswordVerificationCode = passwordVerificationCode; // Add code
+            user.PasswordVerificationCodeExpiry = DateTime.UtcNow.AddMinutes(5); // Add time
+            await _dbContext.SaveChangesAsync();
+
+            return new ApiResponse<User>
+            {
+                Code = 200,
+                Message = "Code sent successfully.",
+            };
+
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    public async Task<ApiResponse<User>> ResetPassword(string email, string password, string code)
+    {
+        try
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == email);
+
+            if (user == null)
+            {
+                return new ApiResponse<User>
+                {
+                    Code = (int)HttpStatusCode.NotFound,
+                    Message = "Invalid or expired verification code."
+                };
+            }
+            
+            // Verify code
+            
+            if (user.PasswordVerificationCode != code || user.PasswordVerificationCodeExpiry < DateTime.UtcNow)
+            {
+                return new ApiResponse<User>
+                {
+                    Code = (int)HttpStatusCode.BadRequest,
+                    Message = "Invalid or expired verification code."
+                };
+            }
+
+            // Update user state
+            user.PasswordVerificationCode = null; // Clear code
+            user.PasswordVerificationCodeExpiry = null;
+            user.PasswordHash = password;
+            await _dbContext.SaveChangesAsync();
+            
+            return new ApiResponse<User>
+            {
+                Code = (int)HttpStatusCode.Accepted,
+                Message = "Password reset successfully."
+            };
         }
         catch (Exception e)
         {

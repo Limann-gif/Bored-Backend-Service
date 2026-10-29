@@ -252,6 +252,12 @@ namespace BoredWeb.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("PasswordVerificationCode")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("PasswordVerificationCodeExpiry")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Phone")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");

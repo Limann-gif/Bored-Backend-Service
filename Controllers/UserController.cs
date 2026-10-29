@@ -65,7 +65,7 @@ public class UserController : ControllerBase
             Role = user.Role
         };
 
-        var token = GenerateJwtToken(validUser, user.Id);
+        var token = GenerateJwtToken(validUser);
         return Ok(new { token });
     }
     
@@ -103,7 +103,7 @@ public class UserController : ControllerBase
         };
 
      // Generate JWT Access Token so they get instant access
-        var token = GenerateJwtToken(user, user.Id);
+        var token = GenerateJwtToken(user);
 
         return Ok(new ApiResponse<object>
         {
@@ -121,14 +121,30 @@ public class UserController : ControllerBase
         return Ok(data);
     }
     
-    private string GenerateJwtToken(UserDto user, Guid userId)
+    //Update password
+    [HttpPost("forgotPassword")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto request)
+    {
+        var data = await _userRepository.ForgotPassword(request.Email);
+        return Ok(data);
+    }
+    
+    //Password reset
+    [HttpPost("resetPassword/{request.Code}")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto request)
+    {
+        var data = await _userRepository.ResetPassword(request.Email,request.Password,request.Code);
+        return Ok(data);
+    }
+    
+    private string GenerateJwtToken(UserDto user)
     {
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
         var claims = new[]
         {
-            new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.Role, user.Role)
         };
@@ -142,5 +158,6 @@ public class UserController : ControllerBase
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+    
 }
 
