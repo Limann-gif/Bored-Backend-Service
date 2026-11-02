@@ -62,7 +62,8 @@ public class UserController : ControllerBase
             Email = user.Email,
             Password = user.PasswordHash,
             Username = user.Name,
-            Role = user.Role
+            Role = user.Role,
+            Id = user.Id
         };
 
         var token = GenerateJwtToken(validUser);
