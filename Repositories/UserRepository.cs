@@ -443,8 +443,8 @@ public class UserRepository : IUserRepository
                 ParticipantsName = new[] { user.Name }
                     .Concat(request.ParticipantsName ?? new List<string>())
                     .ToList(),
-                ParticipantsEmail = new[] { user.Email }
-                    .Concat(request.ParticipantsEmail ?? new List<string>())
+                ParticipantsPhoneNumber = new[] { user.Email }
+                    .Concat(request.ParticipantsPhoneNumber ?? new List<string>())
                     .ToList(),
                 TransactionId = Guid.NewGuid()
             };
@@ -610,14 +610,25 @@ public class UserRepository : IUserRepository
                 .Include(b => b.Activity)
                 .Where(b => b.UserId == userId)
                 .ToListAsync();
+            
+            // Extract members of an activity for every activity shows add it to GroupParticipants
+            
+            foreach (var booking in userBookings)
+            {
+                var participantLists = await _dbContext.ActivityBookingOrders
+                    .Where(b => b.ActivityId == booking.ActivityId)
+                    .Select(b => b.ParticipantsName)
+                    .ToListAsync();                      // runs in SQL: returns List<List<string>>
 
+                booking.ParticipantsName = participantLists
+                    .SelectMany(names => names)          // runs in memory: flattens to List<string>
+                    .Distinct()
+                    .ToList();
+            }
+           
             // 2. Project the data into DTOs and determine the "Grouping Status"
             var formattedActivities = userBookings.Select(b => new 
             {
-                // Determine status logic:
-                // Attended: Booking is confirmed AND activity date has passed
-                // Cancelled: Booking or Activity status is 'cancelled'
-                // Pending: Activity is in the future and booking isn't cancelled
                 GroupStatus = DetermineStatus(b.Activity, b), 
                 Dto = new UserActivityHistoryDto
                 {

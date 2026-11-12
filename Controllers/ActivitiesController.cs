@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using BoredWeb.Models;
+using BoredWeb.Models.DTOs;
 using BoredWeb.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
@@ -97,7 +98,7 @@ public class ActivitiesController: ControllerBase
         return Ok(data);
     }
     
-    // Gets all activities booked for a user
+    // Gets all activities booked for a user, shows other particpants
     [HttpGet("getUserActivityHistory/{userId}")]
     public IActionResult GetUserActivityHistory([FromRoute] Guid userId)
     {

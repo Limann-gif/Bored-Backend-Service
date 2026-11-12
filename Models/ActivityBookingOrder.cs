@@ -18,7 +18,7 @@ public class ActivityBookingOrder
     public decimal AmountPaid { get; set; }
 
     public List<string> ParticipantsName { get; set; } = [];
-    public List<string> ParticipantsEmail { get; set; } = [];
+    public List<string> ParticipantsPhoneNumber { get; set; } = [];
 
     // Navigation
     public User User { get; set; } = null!;

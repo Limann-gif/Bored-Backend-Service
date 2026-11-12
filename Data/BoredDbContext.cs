@@ -55,7 +55,7 @@ public class BoredDbContext(DbContextOptions<BoredDbContext> options) : DbContex
             e.Property(o => o.PaymentStatus).IsRequired().HasMaxLength(20).HasDefaultValue("pending");
             e.Property(o => o.ConfirmationStatus).IsRequired().HasMaxLength(20);
             e.Property(o => o.ParticipantsName).HasColumnType("text[]");
-            e.Property(o => o.ParticipantsEmail).HasColumnType("text[]");
+            e.Property(o => o.ParticipantsPhoneNumber).HasColumnType("text[]");
             e.Property(o => o.CreatedAt).HasDefaultValueSql("now()");
             e.Property(o => o.TransactionId).HasDefaultValueSql("gen_random_uuid()");
             e.Property(o => o.AmountPaid).HasColumnType("decimal(10,2)");
